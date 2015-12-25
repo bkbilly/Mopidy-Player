@@ -3,6 +3,40 @@
  *
  * This is where you write your app.
  */
+var UI = require('ui');
+var Vector2 = require('vector2');
+var Vibe = require('ui/vibe');
+var myServer = "ws://192.168.2.150:6680/mopidy/ws/";
+
+
+var main = new UI.Menu({
+  sections: [{
+    items: [{
+      icon: 'images/menu_icon.png',
+      title: 'Now Playing'
+    }, {
+      title: 'Queue'
+    }, {
+      title: 'Browse Folders'
+    }]
+  }]
+});
+main.show();
+
+
+main.on('select', function(e) {
+  console.log('Selected item #' + e.itemIndex + ' of section #' + e.sectionIndex);
+  console.log('The item is titled "' + e.item.title + '"');
+  if (e.item.title === 'Now Playing'){
+    nowPlayingFunction(myServer);
+  } else if (e.item.title === 'Queue'){
+    libraryQueueFunction(myServer);
+  } else if (e.item.title === 'Browse Folders'){
+    libraryFilesFunction(myServer);
+  }
+});
+
+
 function msToTime(s) {
 
   function addZ(n) {
@@ -21,8 +55,6 @@ function msToTime(s) {
   } else {
     return addZ(hrs) + ':' + addZ(mins) + ':' + addZ(secs);
   }
-
-  return addZ(hrs) + ':' + addZ(mins) + ':' + addZ(secs) + '.' + ms;
 }
 
 function nowPlayingFunction(myServer){
@@ -36,13 +68,14 @@ function nowPlayingFunction(myServer){
       if(position != 0){
         mopidy.playback.getCurrentTrack()
           .done(function(track) {
-            song = track.artists[0].name+' - '+track.album.name+'\n'+track.name;
-            nowPlayingInfo.text(song);
+            console.log(JSON.stringify(track));
+            nowPlayingSongTitle.text(track.name);
+            nowPlayingSongArtist.text(track.artists[0].name);
+            nowPlayingSongAlbum.text(track.album.name);
             nowPlayingPosition.text(seekPosition+'/'+seekMax);
-            console.log(song);
           });
       } else {
-        nowPlayingInfo.text('No Music');
+        nowPlayingSongTitle.text('No Music');
         nowPlayingPosition.text('');
       }
     });
@@ -57,10 +90,32 @@ function nowPlayingFunction(myServer){
       select: 'images/play_pause.png'
     }
   });
-  var nowPlayingInfo = new UI.Text({
-    position: new Vector2(0, 15),
-    size: new Vector2(114, 40),
-    font: 'gothic-18-bold',
+  var nowPlayingSongTitle = new UI.Text({
+    position: new Vector2(0, 0),
+    size: new Vector2(114, 55),
+    font: 'gothic-24-bold',
+    textOverflow: 'fill',
+    borderColor: 'clear',
+    textAlign: 'left',
+    color: 'green',
+    text: ''
+  });
+  var nowPlayingSongArtist = new UI.Text({
+    position: new Vector2(0, 55),
+    size: new Vector2(114, 25),
+    font: 'gothic-18',
+    textOverflow: 'fill',
+    borderColor: 'clear',
+    textAlign: 'left',
+    color: 'green',
+    text: ''
+  });
+  var nowPlayingSongAlbum = new UI.Text({
+    position: new Vector2(0, 80),
+    size: new Vector2(114, 25),
+    font: 'gothic-18',
+    textOverflow: 'fill',
+    borderColor: 'clear',
     textAlign: 'left',
     color: 'green',
     text: ''
@@ -70,18 +125,20 @@ function nowPlayingFunction(myServer){
     size: new Vector2(40, 30),
     font: 'mono-font-14',
     textAlign: 'left',
-    color: 'blue',
+    color: 'red',
     text: ''
   });
   var nowPlayingPosition = new UI.Text({
-    position: new Vector2(45, 115),
-    size: new Vector2(60, 30),
-    font: 'gothic-14',
+    position: new Vector2(0, 130),
+    size: new Vector2(114, 30),
+    font: 'gothic-18',
     textAlign: 'left',
     color: 'red',
     text: ''
   });
-  nowPlaying.add(nowPlayingInfo);
+  nowPlaying.add(nowPlayingSongTitle);
+  nowPlaying.add(nowPlayingSongArtist);
+  nowPlaying.add(nowPlayingSongAlbum);
   nowPlaying.add(nowPlayingVolume);
   nowPlaying.add(nowPlayingPosition);
   nowPlaying.show();
@@ -110,7 +167,7 @@ function nowPlayingFunction(myServer){
     }, 1000);
   });
   mopidy.on("state:offline", function () {
-    nowPlayingInfo.text("Offline...");
+    nowPlayingSongTitle.text("Offline...");
   });
 
   // ----==== Pebble Buttons Actions ====----
@@ -259,36 +316,3 @@ function libraryFilesFunction(myServer){
   });
 
 }
-
-var UI = require('ui');
-var Vector2 = require('vector2');
-var Vibe = require('ui/vibe');
-myServer = "ws://192.168.2.150:6680/mopidy/ws/";
-
-
-var main = new UI.Menu({
-  sections: [{
-    items: [{
-      icon: 'images/menu_icon.png',
-      title: 'Now Playing'
-    }, {
-      title: 'Queue'
-    }, {
-      title: 'Browse Folders'
-    }]
-  }]
-});
-main.show();
-
-
-main.on('select', function(e) {
-  console.log('Selected item #' + e.itemIndex + ' of section #' + e.sectionIndex);
-  console.log('The item is titled "' + e.item.title + '"');
-  if (e.item.title === 'Now Playing'){
-    nowPlayingFunction(myServer);
-  } else if (e.item.title === 'Queue'){
-    libraryQueueFunction(myServer);
-  } else if (e.item.title === 'Browse Folders'){
-    libraryFilesFunction(myServer);
-  }
-});
