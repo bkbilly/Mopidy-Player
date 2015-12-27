@@ -32,7 +32,7 @@ main.on('select', function(e) {
   } else if (e.item.title === 'Queue'){
     libraryQueueFunction(myServer);
   } else if (e.item.title === 'Browse Folders'){
-    libraryFilesFunction(myServer);
+    libraryFilesFunction(myServer, null);
   }
 });
 
@@ -275,19 +275,16 @@ function libraryQueueFunction(myServer){
   });
 }
 
-function libraryFilesFunction(myServer){
+function libraryFilesFunction(myServer, BrowseURI){
   var getFiles = function(filePath) {
-    console.log(filePath);
     mopidy.library.browse(uri=filePath).done(function(files){
-      items = [];
       for(i in files){
-        items.push({
-          title: files[i].name,
-          subtitle: files[i].type,
-          uri: files[i].uri
-        });
+        if(files[i].type === 'directory'){
+          getFiles(files[i].uri);
+        } else if(files[i].type === 'track') {
+          mopidy.tracklist.add(null, null, uri=files[i].uri, null)
+        }
       }
-      browseFiles.items(0, items);
     });
   };
 
@@ -305,13 +302,32 @@ function libraryFilesFunction(myServer){
   });
   mopidy.connect();
   mopidy.on("state:online", function () {
-    getFiles(null);
+    console.log(BrowseURI);
+    mopidy.library.browse(uri=BrowseURI).done(function(files){
+      var items = [];
+      for(i in files){
+        items.push({
+          title: files[i].name,
+          subtitle: files[i].type,
+          uri: files[i].uri
+        });
+      }
+      browseFiles.items(0, items);
+      browseFiles.selection(0, 0);
+    });
+  });
+
+  browseFiles.on('longSelect', function(e) {
+    subSongs = getFiles(e.item.uri);
+    console.log(JSON.stringify(subSongs));
   });
 
   browseFiles.on('select', function(e) {
     type = e.item.subtitle;
     if(type === 'directory'){
-      getFiles(e.item.uri);
+      libraryFilesFunction(myServer, e.item.uri);
+    } else if(files[i].type === 'track') {
+      mopidy.tracklist.add(null, null, uri=e.item.uri, null)
     }
   });
 
