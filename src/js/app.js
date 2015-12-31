@@ -6,8 +6,36 @@
 var UI = require('ui');
 var Vector2 = require('vector2');
 var Vibe = require('ui/vibe');
-var myServer = "ws://192.168.2.150:6680/mopidy/ws/";
+var Mopidy = require("mopidy");
+var Settings = require('settings');
 
+Settings.config(
+  { url: 'http://bkbilly.github.io/Mopidy-Player-Config/' },
+  function(e) {
+    console.log('opening configurable');
+  },
+  function(e) {
+    console.log('closed configurable');
+    console.log(JSON.stringify(e.options));
+    Settings.option(e.options);
+  }
+);
+
+var MopidyIP = Settings.option('ip');
+var MopidyPort = Settings.option('port');
+var myServer = "ws://"+MopidyIP+":"+MopidyPort+"/mopidy/ws/";
+
+console.log(myServer);
+// var myServer = "ws://192.168.2.150:6680/mopidy/ws/";
+var mopidy = new Mopidy({webSocketUrl: myServer});
+
+mopidy.connect();
+mopidy.on("state:online", function() {
+  console.log("CONNECTED...")
+});
+mopidy.on("state:offline", function() {
+  console.log("NOT CONNECTED...")
+});
 
 var main = new UI.Menu({
   sections: [{
@@ -28,11 +56,11 @@ main.on('select', function(e) {
   console.log('Selected item #' + e.itemIndex + ' of section #' + e.sectionIndex);
   console.log('The item is titled "' + e.item.title + '"');
   if (e.item.title === 'Now Playing'){
-    nowPlayingFunction(myServer);
+    nowPlayingFunction();
   } else if (e.item.title === 'Queue'){
-    libraryQueueFunction(myServer);
+    libraryQueueFunction();
   } else if (e.item.title === 'Browse Folders'){
-    libraryFilesFunction(myServer, null);
+    libraryFilesFunction(null);
   }
 });
 
@@ -57,7 +85,7 @@ function msToTime(s) {
   }
 }
 
-function nowPlayingFunction(myServer){
+function nowPlayingFunction(){
   var updateScreenInfo = function() {
     mopidy.playback.getCurrentTlTrack().done(function(info){
       seekMax = msToTime(info.track.length)
@@ -147,46 +175,38 @@ function nowPlayingFunction(myServer){
   var musicInterval;
   var seekMax = 0;
   var seekPosition = 0;
-  var Mopidy = require("mopidy");
-  var mopidy = new Mopidy({
-      webSocketUrl: myServer
-  });
-  mopidy.connect();
   var musicVolume;
 
+  // ----==== Init ====----
+  mopidy.mixer.getVolume().done(function(volume){
+    musicVolume = volume;
+    nowPlayingVolume.text(musicVolume+'%');
+  });
 
-  mopidy.on("state:online", function () {
-    mopidy.mixer.getVolume().done(function(volume){
-      musicVolume = volume;
-      nowPlayingVolume.text(musicVolume+'%');
-    });
-
+  updateScreenInfo();
+  musicInterval = setInterval(function() {
     updateScreenInfo();
-    musicInterval = setInterval(function() {
-      updateScreenInfo();
-    }, 1000);
-  });
-  mopidy.on("state:offline", function () {
-    nowPlayingSongTitle.text("Offline...");
-  });
+  }, 1000);
 
   // ----==== Pebble Buttons Actions ====----
   nowPlaying.on('click', 'up', function(e) {
-    musicVolume = musicVolume + 6;
+    musicVolume = musicVolume + 10;
     if(musicVolume > 100){
       musicVolume = 100;
     }
-    mopidy.mixer.setVolume(musicVolume);
-    nowPlayingVolume.text(musicVolume+'%');
+    mopidy.mixer.setVolume(musicVolume).done(function(){
+      nowPlayingVolume.text(musicVolume+'%');
+    });
   });
 
   nowPlaying.on('click', 'down', function(e) {
-    musicVolume = musicVolume - 6;
+    musicVolume = musicVolume - 10;
     if(musicVolume < 0){
       musicVolume = 0;
     }
-    mopidy.mixer.setVolume(musicVolume);
-    nowPlayingVolume.text(musicVolume+'%');
+    mopidy.mixer.setVolume(musicVolume).done(function(){
+      nowPlayingVolume.text(musicVolume+'%');
+    });
   });
 
   nowPlaying.on('click', 'select', function(e) {
@@ -222,7 +242,7 @@ function nowPlayingFunction(myServer){
   });
 }
 
-function libraryQueueFunction(myServer){
+function libraryQueueFunction(){
   var getQueue = function() {
     mopidy.tracklist.getTlTracks().done(function(tracks){
       items = [];
@@ -242,6 +262,7 @@ function libraryQueueFunction(myServer){
     });
   };
 
+  // ----==== Pebble Menu ====----
   var libraryQueue = new UI.Menu({
     sections: [{
       title: 'Queue',
@@ -250,19 +271,14 @@ function libraryQueueFunction(myServer){
   });
   libraryQueue.show();
 
-  var Mopidy = require("mopidy");
-  var mopidy = new Mopidy({
-      webSocketUrl: myServer
-  });
-  mopidy.connect();
-  mopidy.on("state:online", function () {
+
+  // ----==== Init ====----
+  getQueue();
+  musicInterval = setInterval(function() {
     getQueue();
-    musicInterval = setInterval(function() {
-      getQueue();
-    }, 1000);
+  }, 1000);
 
-  });
-
+  // ----==== Buttons actions ====----
   libraryQueue.on('select', function(e) {
     mopidy.playback.play(tl_track=e.item.tl_track);
   });
@@ -275,7 +291,7 @@ function libraryQueueFunction(myServer){
   });
 }
 
-function libraryFilesFunction(myServer, BrowseURI){
+function libraryFilesFunction(BrowseURI){
   var getFiles = function(filePath) {
     mopidy.library.browse(uri=filePath).done(function(files){
       for(i in files){
@@ -288,6 +304,7 @@ function libraryFilesFunction(myServer, BrowseURI){
     });
   };
 
+  // ----==== Pebble Menu ====----
   var browseFiles = new UI.Menu({
     sections: [{
       title: 'Browse Files',
@@ -296,27 +313,22 @@ function libraryFilesFunction(myServer, BrowseURI){
   });
   browseFiles.show();
 
-  var Mopidy = require("mopidy");
-  var mopidy = new Mopidy({
-      webSocketUrl: myServer
-  });
-  mopidy.connect();
-  mopidy.on("state:online", function () {
-    console.log(BrowseURI);
-    mopidy.library.browse(uri=BrowseURI).done(function(files){
-      var items = [];
-      for(i in files){
-        items.push({
-          title: files[i].name,
-          subtitle: files[i].type,
-          uri: files[i].uri
-        });
-      }
-      browseFiles.items(0, items);
-      browseFiles.selection(0, 0);
-    });
+  // ----==== Init ====----
+  console.log(BrowseURI);
+  mopidy.library.browse(uri=BrowseURI).done(function(files){
+    var items = [];
+    for(i in files){
+      items.push({
+        title: files[i].name,
+        subtitle: files[i].type,
+        uri: files[i].uri
+      });
+    }
+    browseFiles.items(0, items);
+    browseFiles.selection(0, 0);
   });
 
+  // ----==== Buttons ====----
   browseFiles.on('longSelect', function(e) {
     subSongs = getFiles(e.item.uri);
     console.log(JSON.stringify(subSongs));
@@ -325,10 +337,9 @@ function libraryFilesFunction(myServer, BrowseURI){
   browseFiles.on('select', function(e) {
     type = e.item.subtitle;
     if(type === 'directory'){
-      libraryFilesFunction(myServer, e.item.uri);
+      libraryFilesFunction(e.item.uri);
     } else if(files[i].type === 'track') {
       mopidy.tracklist.add(null, null, uri=e.item.uri, null)
     }
   });
-
 }
