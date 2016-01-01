@@ -18,51 +18,26 @@ Settings.config(
     console.log('closed configurable');
     console.log(JSON.stringify(e.options));
     Settings.option(e.options);
+    checkConfig();
   }
 );
-
-var MopidyIP = Settings.option('ip');
-var MopidyPort = Settings.option('port');
-var myServer = "ws://"+MopidyIP+":"+MopidyPort+"/mopidy/ws/";
-
-console.log(myServer);
-// var myServer = "ws://192.168.2.150:6680/mopidy/ws/";
-var mopidy = new Mopidy({webSocketUrl: myServer});
-
-mopidy.connect();
-mopidy.on("state:online", function() {
-  console.log("CONNECTED...")
+var ErrorMessage = new UI.Card({
+  title: "Can't Connect to Mopidy",
+  body: 'Check if you are on the same Network and the Configuration is correct',
+  scrollable: true
 });
-mopidy.on("state:offline", function() {
-  console.log("NOT CONNECTED...")
+var NoConfigMessage = new UI.Card({
+  title: "Configuration is Undefined",
+  body: 'Edit the the Configuration',
+  scrollable: true
 });
 
-var main = new UI.Menu({
-  sections: [{
-    items: [{
-      icon: 'images/menu_icon.png',
-      title: 'Now Playing'
-    }, {
-      title: 'Queue'
-    }, {
-      title: 'Browse Folders'
-    }]
-  }]
-});
-main.show();
+var NoConfigMessageSHOWED = false;
+var ErrorMessageSHOWED = false;
+var mainMenuSHOWED = false;
+var mopidy;
+checkConfig();
 
-
-main.on('select', function(e) {
-  console.log('Selected item #' + e.itemIndex + ' of section #' + e.sectionIndex);
-  console.log('The item is titled "' + e.item.title + '"');
-  if (e.item.title === 'Now Playing'){
-    nowPlayingFunction();
-  } else if (e.item.title === 'Queue'){
-    libraryQueueFunction();
-  } else if (e.item.title === 'Browse Folders'){
-    libraryFilesFunction(null);
-  }
-});
 
 
 function msToTime(s) {
@@ -83,6 +58,71 @@ function msToTime(s) {
   } else {
     return addZ(hrs) + ':' + addZ(mins) + ':' + addZ(secs);
   }
+}
+
+function checkConfig(){
+  console.log("Checking Config")
+  var MopidyIP = Settings.option('ip');
+  var MopidyPort = Settings.option('port');
+  var myServer = "ws://"+MopidyIP+":"+MopidyPort+"/mopidy/ws/";
+
+  if(MopidyIP === undefined || MopidyPort === undefined){
+    if(!ErrorMessageSHOWED)
+      NoConfigMessage.show();
+    NoConfigMessageSHOWED = true;
+  } else {
+    connectToMopidy(myServer);
+  }
+}
+
+function connectToMopidy(myServer){
+  var connectInterval;
+  mopidy = new Mopidy({webSocketUrl: myServer});
+
+  mopidy.connect();
+  mopidy.on("state:online", function() {
+    console.log("Online");
+    clearInterval(connectInterval);
+    NoConfigMessageSHOWED = false;
+    ErrorMessageSHOWED = false;
+    NoConfigMessage.hide();
+    ErrorMessage.hide();
+    MainMenuFunction();
+  });
+  mopidy.on("state:offline", function() {
+    if(!ErrorMessageSHOWED)
+      ErrorMessage.show();
+    ErrorMessageSHOWED = true;
+  });
+}
+
+function MainMenuFunction(){
+  var mainMenu = new UI.Menu({
+    sections: [{
+      items: [{
+        icon: 'images/menu_icon.png',
+        title: 'Now Playing'
+      }, {
+        title: 'Queue'
+      }, {
+        title: 'Browse Folders'
+      }]
+    }]
+  });
+  if(!mainMenuSHOWED)
+    mainMenu.show();
+
+  mainMenu.on('select', function(e) {
+    console.log('Selected item #' + e.itemIndex + ' of section #' + e.sectionIndex);
+    console.log('The item is titled "' + e.item.title + '"');
+    if (e.item.title === 'Now Playing'){
+      nowPlayingFunction();
+    } else if (e.item.title === 'Queue'){
+      libraryQueueFunction();
+    } else if (e.item.title === 'Browse Folders'){
+      libraryFilesFunction(null);
+    }
+  });
 }
 
 function nowPlayingFunction(){
