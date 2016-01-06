@@ -18,7 +18,7 @@ Settings.config(
     console.log('closed configurable');
     console.log(JSON.stringify(e.options));
     Settings.option(e.options);
-    checkConfig();
+    connectToMopidy();
   }
 );
 var ErrorMessage = new UI.Card({
@@ -36,7 +36,7 @@ var NoConfigMessageSHOWED = false;
 var ErrorMessageSHOWED = false;
 var mainMenuSHOWED = false;
 var mopidy;
-checkConfig();
+connectToMopidy();
 
 
 
@@ -60,8 +60,29 @@ function msToTime(s) {
   }
 }
 
-function checkConfig(){
+function connectToMopidy(){
+  var makeConnection = function(myServer){
+    var connectInterval;
+    mopidy = new Mopidy({webSocketUrl: myServer});
+
+    mopidy.connect();
+    mopidy.on("state:online", function() {
+      console.log("Online");
+      clearInterval(connectInterval);
+      NoConfigMessageSHOWED = false;
+      ErrorMessageSHOWED = false;
+      NoConfigMessage.hide();
+      ErrorMessage.hide();
+      MainMenuFunction();
+    });
+    mopidy.on("state:offline", function() {
+      if(!ErrorMessageSHOWED)
+        ErrorMessage.show();
+      ErrorMessageSHOWED = true;
+    });
+  }
   console.log("Checking Config")
+  // Settings.option({'ip': '192.168.2.150', 'port':'6680'}) // TODO REMEMBER TO DELETE!!!!!!!!!!!!!!!!!!!!!
   var MopidyIP = Settings.option('ip');
   var MopidyPort = Settings.option('port');
   var myServer = "ws://"+MopidyIP+":"+MopidyPort+"/mopidy/ws/";
@@ -71,40 +92,22 @@ function checkConfig(){
       NoConfigMessage.show();
     NoConfigMessageSHOWED = true;
   } else {
-    connectToMopidy(myServer);
+    makeConnection(myServer);
   }
-}
-
-function connectToMopidy(myServer){
-  var connectInterval;
-  mopidy = new Mopidy({webSocketUrl: myServer});
-
-  mopidy.connect();
-  mopidy.on("state:online", function() {
-    console.log("Online");
-    clearInterval(connectInterval);
-    NoConfigMessageSHOWED = false;
-    ErrorMessageSHOWED = false;
-    NoConfigMessage.hide();
-    ErrorMessage.hide();
-    MainMenuFunction();
-  });
-  mopidy.on("state:offline", function() {
-    if(!ErrorMessageSHOWED)
-      ErrorMessage.show();
-    ErrorMessageSHOWED = true;
-  });
 }
 
 function MainMenuFunction(){
   var mainMenu = new UI.Menu({
+    highlightBackgroundColor: '#bf00ff',
     sections: [{
       items: [{
-        icon: 'images/menu_icon.png',
+        icon: 'images/menu_music.png',
         title: 'Now Playing'
       }, {
+        icon: 'images/menu_queue.png',
         title: 'Queue'
       }, {
+        icon: 'images/menu_browse.png',
         title: 'Browse Folders'
       }]
     }]
@@ -130,6 +133,15 @@ function nowPlayingFunction(){
     mopidy.playback.getCurrentTlTrack().done(function(info){
       seekMax = msToTime(info.track.length)
     });
+    mopidy.playback.getState().done(function(state){
+      if(state === 'playing'){
+        nowPlayingStatus.image("images/playing.png");
+      } else if(state === "stopped") {
+        nowPlayingStatus.image("images/stopped.png");
+      } else if(state === "paused") {
+        nowPlayingStatus.image("images/paused.png");
+      }
+    });
     mopidy.playback.getTimePosition().done(function(position){
       console.log(position);
       seekPosition = msToTime(position);
@@ -139,11 +151,14 @@ function nowPlayingFunction(){
             console.log(JSON.stringify(track));
             nowPlayingSongTitle.text(track.name);
             nowPlayingSongArtist.text(track.artists[0].name);
-            nowPlayingSongAlbum.text(track.album.name);
+            if(track.hasOwnProperty("album"))
+              nowPlayingSongAlbum.text(track.album.name);
             nowPlayingPosition.text(seekPosition+'/'+seekMax);
           });
       } else {
         nowPlayingSongTitle.text('No Music');
+        nowPlayingSongArtist.text('');
+        nowPlayingSongAlbum.text('');
         nowPlayingPosition.text('');
       }
     });
@@ -160,7 +175,7 @@ function nowPlayingFunction(){
   });
   var nowPlayingSongTitle = new UI.Text({
     position: new Vector2(0, 0),
-    size: new Vector2(114, 55),
+    size: new Vector2(115, 55),
     font: 'gothic-24-bold',
     textOverflow: 'fill',
     borderColor: 'clear',
@@ -170,7 +185,7 @@ function nowPlayingFunction(){
   });
   var nowPlayingSongArtist = new UI.Text({
     position: new Vector2(0, 55),
-    size: new Vector2(114, 25),
+    size: new Vector2(115, 25),
     font: 'gothic-18',
     textOverflow: 'fill',
     borderColor: 'clear',
@@ -180,7 +195,7 @@ function nowPlayingFunction(){
   });
   var nowPlayingSongAlbum = new UI.Text({
     position: new Vector2(0, 80),
-    size: new Vector2(114, 25),
+    size: new Vector2(115, 25),
     font: 'gothic-18',
     textOverflow: 'fill',
     borderColor: 'clear',
@@ -189,26 +204,35 @@ function nowPlayingFunction(){
     text: ''
   });
   var nowPlayingVolume = new UI.Text({
-    position: new Vector2(0, 115),
-    size: new Vector2(40, 30),
+    position: new Vector2(0, 120),
+    size: new Vector2(40, 20),
     font: 'mono-font-14',
+    borderColor: 'clear',
     textAlign: 'left',
-    color: 'red',
+    color: 'yellow',
     text: ''
   });
   var nowPlayingPosition = new UI.Text({
-    position: new Vector2(0, 130),
-    size: new Vector2(114, 30),
-    font: 'gothic-18',
+    position: new Vector2(0, 140),
+    size: new Vector2(100, 27),
+    font: 'gothic-24',
+    borderColor: 'clear',
     textAlign: 'left',
-    color: 'red',
+    color: '#ff00ff',
     text: ''
+  });
+  var nowPlayingStatus = new UI.Image({
+    position: new Vector2(85, 110),
+    size: new Vector2(24, 32),
+    borderColor: 'clear',
+    image: ''
   });
   nowPlaying.add(nowPlayingSongTitle);
   nowPlaying.add(nowPlayingSongArtist);
   nowPlaying.add(nowPlayingSongAlbum);
   nowPlaying.add(nowPlayingVolume);
   nowPlaying.add(nowPlayingPosition);
+  nowPlaying.add(nowPlayingStatus);
   nowPlaying.show();
 
   // ----==== Variables ====----
@@ -271,9 +295,7 @@ function nowPlayingFunction(){
 
   nowPlaying.on('longClick', 'select', function(e) {
     Vibe.vibrate('short');
-    mopidy.history.getHistory().done(function(msg){
-      console.log(JSON.stringify(msg));
-    });
+    mopidy.playback.stop();
   });
 
   nowPlaying.on('click', 'back', function(e) {
@@ -284,15 +306,34 @@ function nowPlayingFunction(){
 
 function libraryQueueFunction(){
   var getQueue = function() {
+    var nowPlayingURI;
+    var nowPlayingIcon;
+    mopidy.playback.getCurrentTlTrack().done(function(song){
+      if(song !== null)
+        nowPlayingURI = song.track.uri;
+    });
+    mopidy.playback.getState().done(function(state){
+      if(state === 'playing'){
+        nowPlayingIcon = "images/playing.png";
+      } else if(state === "stopped") {
+        nowPlayingIcon = "images/stopped.png";
+      } else if(state === "paused") {
+        nowPlayingIcon = "images/paused.png";
+      }
+    });
     mopidy.tracklist.getTlTracks().done(function(tracks){
-      items = [];
+      var items = [];
       for(i in tracks){
-        subtitle = "";
+        var subtitle = "";
+        var icon = "";
         if(tracks[i].track.hasOwnProperty("artists"))
           subtitle = tracks[i].track.artists[0].name;
+        if(tracks[i].track.uri === nowPlayingURI)
+          icon = nowPlayingIcon;
         items.push({
           title: tracks[i].track.name,
           subtitle: subtitle,
+          icon: icon,
           name: tracks[i].track.name,
           tlid: tracks[i].tlid,
           tl_track: tracks[i]
@@ -304,6 +345,7 @@ function libraryQueueFunction(){
 
   // ----==== Pebble Menu ====----
   var libraryQueue = new UI.Menu({
+    highlightBackgroundColor: '#bf00ff',
     sections: [{
       title: 'Queue',
       items: []
@@ -332,11 +374,39 @@ function libraryQueueFunction(){
 }
 
 function libraryFilesFunction(BrowseURI){
-  var getFiles = function(filePath) {
+  var selectOption = function(filePath){
+    // ----==== Pebble Menu ====----
+    var selectOptionMenu = new UI.Menu({
+      highlightBackgroundColor: '#bf00ff',
+      sections: [{
+        title: 'Select an Option',
+        items: [{
+          title: 'Add and replace Queue'
+        }, {
+          title: 'Add to Queue'
+        }]
+      }]
+    });
+    selectOptionMenu.show();
+
+    // ----==== Buttons ====----
+    selectOptionMenu.on('select', function(e) {
+      if (e.item.title === 'Add and replace Queue'){
+        mopidy.tracklist.clear()
+        playFiles(filePath);
+        selectOptionMenu.hide();
+      } else if (e.item.title === 'Add to Queue'){
+        playFiles(filePath);
+        selectOptionMenu.hide();
+      }
+    });
+  }
+
+  var playFiles = function(filePath) {
     mopidy.library.browse(uri=filePath).done(function(files){
       for(i in files){
         if(files[i].type === 'directory'){
-          getFiles(files[i].uri);
+          playFiles(files[i].uri);
         } else if(files[i].type === 'track') {
           mopidy.tracklist.add(null, null, uri=files[i].uri, null)
         }
@@ -346,6 +416,7 @@ function libraryFilesFunction(BrowseURI){
 
   // ----==== Pebble Menu ====----
   var browseFiles = new UI.Menu({
+    highlightBackgroundColor: '#bf00ff',
     sections: [{
       title: 'Browse Files',
       items: []
@@ -370,8 +441,8 @@ function libraryFilesFunction(BrowseURI){
 
   // ----==== Buttons ====----
   browseFiles.on('longSelect', function(e) {
-    subSongs = getFiles(e.item.uri);
-    console.log(JSON.stringify(subSongs));
+    selectOption(e.item.uri);
+    Vibe.vibrate('short');
   });
 
   browseFiles.on('select', function(e) {

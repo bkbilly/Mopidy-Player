@@ -4,13 +4,43 @@
     "configurable"
   ],
   "companyName": "bkbilly@hotmail.com",
-  "longName": "MPD-Player",
+  "longName": "Mopidy-Player",
   "resources": {
     "media": [
       {
         "file": "images/menu_icon.png",
         "menuIcon": true,
         "name": "IMAGE_MENU_ICON",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/menu_browse.png",
+        "name": "MENU_BROWSE",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/menu_music.png",
+        "name": "MENU_MUSIC",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/menu_queue.png",
+        "name": "MENU_QUEUE",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/playing.png",
+        "name": "PLAYING",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/stopped.png",
+        "name": "STOPPED",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/paused.png",
+        "name": "PAUSED",
         "type": "bitmap"
       },
       {
