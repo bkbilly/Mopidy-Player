@@ -234,6 +234,22 @@ function nowPlayingFunction(){
   nowPlaying.add(nowPlayingPosition);
   nowPlaying.add(nowPlayingStatus);
   nowPlaying.show();
+  if(Pebble.getActiveWatchInfo) {
+    var watch = Pebble.getActiveWatchInfo();
+    if(watch.platform === 'chalk'){
+      nowPlayingSongTitle.position(new Vector2(5, 60));
+      nowPlayingSongTitle.size(new Vector2(135, 55));
+      nowPlayingSongTitle.textAlign('center');
+      nowPlayingSongArtist.position(new Vector2(30, 20));
+      nowPlayingSongArtist.textAlign('center');
+      nowPlayingSongAlbum.position(new Vector2(30, 40));
+      nowPlayingSongAlbum.textAlign('center');
+      nowPlayingVolume.position(new Vector2(40, 150));
+      nowPlayingPosition.position(new Vector2(35, 120));
+      nowPlayingStatus.position(new Vector2(90, 145));
+    }
+  }
+
 
   // ----==== Variables ====----
   var musicInterval;
@@ -305,7 +321,7 @@ function nowPlayingFunction(){
 }
 
 function libraryQueueFunction(){
-  var getQueue = function() {
+  var getQueue = function(selectPlaying) {
     var nowPlayingURI;
     var nowPlayingIcon;
     mopidy.playback.getCurrentTlTrack().done(function(song){
@@ -328,8 +344,10 @@ function libraryQueueFunction(){
         var icon = "";
         if(tracks[i].track.hasOwnProperty("artists"))
           subtitle = tracks[i].track.artists[0].name;
-        if(tracks[i].track.uri === nowPlayingURI)
+        if(tracks[i].track.uri === nowPlayingURI){
           icon = nowPlayingIcon;
+          nowPlayingIndex = i;
+        }
         items.push({
           title: tracks[i].track.name,
           subtitle: subtitle,
@@ -340,6 +358,8 @@ function libraryQueueFunction(){
         });
       }
       libraryQueue.items(0, items);
+      if(selectPlaying)
+        libraryQueue.selection(0, nowPlayingIndex);
     });
   };
 
@@ -355,9 +375,9 @@ function libraryQueueFunction(){
 
 
   // ----==== Init ====----
-  getQueue();
+  getQueue(true);
   musicInterval = setInterval(function() {
-    getQueue();
+    getQueue(false);
   }, 1000);
 
   // ----==== Buttons actions ====----
@@ -369,7 +389,7 @@ function libraryQueueFunction(){
     console.log(e.item.name);
     console.log(e.item.title);
     mopidy.tracklist.remove(criteria={'name': [e.item.name]});
-    getQueue();
+    getQueue(false);
   });
 }
 

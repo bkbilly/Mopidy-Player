@@ -73,11 +73,13 @@
   "sdkVersion": "3",
   "shortName": "Mopidy-Player",
   "targetPlatforms": [
-    "basalt"
+    "aplite",
+    "basalt",
+    "chalk"
   ],
   "uuid": "61a2f887-6b48-4af6-b8c0-c6904fe00cbb",
   "versionCode": 1,
-  "versionLabel": "0.5",
+  "versionLabel": "0.6",
   "watchapp": {
     "watchface": false
   }
