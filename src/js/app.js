@@ -21,6 +21,11 @@ Settings.config(
     connectToMopidy();
   }
 );
+var ConnectionErrorMessage = new UI.Card({
+  title: "connecting to",
+  body: 'Check that you have access to this url:',
+  scrollable: true
+});
 var ErrorMessage = new UI.Card({
   title: "Can't Connect to Mopidy",
   body: 'Check if you are on the same Network and the Configuration is correct',
@@ -32,6 +37,7 @@ var NoConfigMessage = new UI.Card({
   scrollable: true
 });
 
+var ConnectionErrorMessageSHOWED = true;
 var NoConfigMessageSHOWED = false;
 var ErrorMessageSHOWED = false;
 var mainMenuSHOWED = false;
@@ -62,27 +68,37 @@ function msToTime(s) {
 
 function connectToMopidy(){
   var makeConnection = function(myServer){
-    var connectInterval;
+    console.log(myServer);
+    ConnectionErrorMessage.body(myServer);
+    ConnectionErrorMessage.show();
     mopidy = new Mopidy({webSocketUrl: myServer});
 
     mopidy.connect();
     mopidy.on("state:online", function() {
-      console.log("Online");
-      clearInterval(connectInterval);
+      console.log("Mopidy is Online");
+      ConnectionErrorMessageSHOWED = false;
       NoConfigMessageSHOWED = false;
       ErrorMessageSHOWED = false;
+      ConnectionErrorMessage.hide();
       NoConfigMessage.hide();
       ErrorMessage.hide();
       MainMenuFunction();
     });
     mopidy.on("state:offline", function() {
+      console.log("Mopidy is Offline");
       if(!ErrorMessageSHOWED)
         ErrorMessage.show();
       ErrorMessageSHOWED = true;
     });
+    mopidy.on("websocket:error", function() {
+      console.log("can't connect");
+      if(!ConnectionErrorMessageSHOWED)
+        ConnectionErrorMessage.show();
+      ConnectionErrorMessageSHOWED = true;
+    });
   }
   console.log("Checking Config")
-  // Settings.option({'ip': '192.168.2.150', 'port':'6680'}) // TODO REMEMBER TO DELETE!!!!!!!!!!!!!!!!!!!!!
+  Settings.option({'ip': '192.168.2.150', 'port':'6680'}) // TODO REMEMBER TO DELETE!!!!!!!!!!!!!!!!!!!!!
   var MopidyIP = Settings.option('ip');
   var MopidyPort = Settings.option('port');
   var myServer = "ws://"+MopidyIP+":"+MopidyPort+"/mopidy/ws/";
