@@ -98,7 +98,7 @@ function connectToMopidy(){
     });
   }
   console.log("Checking Config")
-  Settings.option({'ip': '192.168.2.150', 'port':'6680'}) // TODO REMEMBER TO DELETE!!!!!!!!!!!!!!!!!!!!!
+  // Settings.option({'ip': '192.168.2.150', 'port':'6680'}) // TODO REMEMBER TO DELETE!!!!!!!!!!!!!!!!!!!!!
   var MopidyIP = Settings.option('ip');
   var MopidyPort = Settings.option('port');
   var myServer = "ws://"+MopidyIP+":"+MopidyPort+"/mopidy/ws/";
