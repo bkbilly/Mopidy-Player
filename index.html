@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Page Title</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/css/materialize.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.5/js/materialize.min.js"></script>
+
+    <script>
+      function sendToPebble(){
+        var options = {}
+        $('textarea, select, [type="hidden"], [type="password"], [type="text"]').each(function(){options[$(this).attr('id')] = $(this).val();})
+        $('[type="radio"], [type="checkbox"]').each(function(){options[$(this).attr('id')] = $(this).is(':checked');})
+        console.log(options);
+        document.location = 'pebblejs://close#' + encodeURIComponent(JSON.stringify(options));
+      }
+      $().ready(function() {
+        var obj = jQuery.parseJSON(decodeURIComponent(window.location.search.substring(1)));
+        for(key in obj) {
+          $("#"+[key]).val(obj[key]);
+          // $("#"+[key]).val(obj[key]).slider("refresh");
+        }
+      });
+    </script>
+  </head>
+<body>
+  <nav class="top-nav">
+    <div class="container">
+      <div class="nav-wrapper" style="font-size:6vw;">Mopidy Configuration</div>
+    </div>
+  </nav>
+
+  <div class="row">
+    <form class="col s12" onsubmit="sendToPebble(); return false">
+      <div class="row">
+        <div class="input-field col s10">
+          <input id="IP_ID" type="text" class="validate">
+          <label for="IP_ID">Address</label>
+        </div>
+      <div class="row">
+        <div class="input-field col s10">
+          <input id="Port_ID" type="text" class="validate">
+          <label for="Port_ID">Port Number</label>
+        </div>
+      </div>
+      <button class="btn waves-effect waves-light" type="submit" onclick="" name="action" >Submit</button>
+
+    </form>
+  </div>
+
+</body>
+</html>
